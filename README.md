@@ -7,8 +7,9 @@ Saturday 21 August 2027 · Church 4:00 PM (St. Sebastian's Church, Katuwapitiya)
 **Prerequisites:** Node.js 22
 
 1. `npm install`
-2. Create `.env.local` with `VITE_SHEETS_ENDPOINT="https://script.google.com/macros/s/.../exec"`
-3. `npm run dev`
+2. `npm run dev`
+
+The Google Sheets endpoint is hard-coded in [`src/config.ts`](src/config.ts). Setting `VITE_SHEETS_ENDPOINT` overrides it.
 
 Couple names used by the admin page and the WhatsApp message live in [`src/config.ts`](src/config.ts).
 
@@ -42,6 +43,6 @@ To hide a wish from the website, untick its **Show on Website** box.
 2. Replace everything in `Code.gs` with the contents of `google-apps-script/Code.gs`, then save.
 3. Select the `setup` function and click **Run**. Approve the permissions; this creates both sheets.
 4. **Deploy → New deployment → Web app**, with *Execute as: Me* and *Who has access: Anyone*.
-5. Copy the Web App URL (it ends in `/exec`) into `VITE_SHEETS_ENDPOINT`, both in `.env.local` and in your hosting provider's environment variables. Then redeploy the site.
+5. Copy the Web App URL (it ends in `/exec`) into `DEFAULT_SHEETS_ENDPOINT` in `src/config.ts`, then redeploy the site.
 
 If you edit `Code.gs` later, use **Deploy → Manage deployments → Edit → Version: New version** so the URL stays the same.
