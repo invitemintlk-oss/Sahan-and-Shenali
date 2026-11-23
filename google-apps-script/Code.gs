@@ -14,21 +14,8 @@ var SPREADSHEET_ID = '19vBufqGiKGF_m6HpOXyWaK2dWhsP3ad9am_dSz7-o7g';
 var SHEETS = {
   rsvp: {
     name: 'RSVP',
-    headers: [
-      'Submitted At',
-      'Invited As',
-      'Primary Guest',
-      'Attendance',
-      'Party Type',
-      'Guest Count',
-      'Guest Names',
-      'Veg Meals',
-      'Non-Veg Meals',
-      'Meal Details',
-      'Page URL',
-      'User Agent',
-    ],
-    widths: [160, 180, 180, 110, 110, 100, 280, 90, 110, 320, 260, 260],
+    headers: ['Submitted At', 'Name', 'Attendance', 'Invited As', 'Page URL', 'User Agent'],
+    widths: [160, 220, 130, 200, 260, 260],
   },
   wish: {
     name: 'Wishes',
@@ -37,7 +24,7 @@ var SHEETS = {
   },
 };
 
-var HEADER_BG = '#C4714A';
+var HEADER_BG = '#8E2457'; // deep berry
 var HEADER_FG = '#FFFFFF';
 var MAX_PUBLIC_WISHES = 100;
 
@@ -97,41 +84,26 @@ function doGet(e) {
 /* ------------------------------------------------------------------ */
 
 function saveRsvp_(ss, data) {
+  var name = clean_(data.name, 100);
+  var attendance = String(data.attendance || '').toLowerCase();
+  if (!name) throw new Error('Name is required');
+  if (attendance !== 'yes' && attendance !== 'no') throw new Error('Attendance is required');
+
   var sheet = getSheet_(ss, 'rsvp');
-  var guests = Array.isArray(data.guests) ? data.guests : [];
-  var attending = String(data.attendance || '').toLowerCase() === 'yes';
-
-  var names = guests.map(function (g) { return clean_(g && g.name, 100); }).filter(String);
-  var veg = 0;
-  var nonVeg = 0;
-  var mealDetails = [];
-
-  guests.forEach(function (g) {
-    var name = clean_(g && g.name, 100);
-    var meal = String((g && g.meal) || '').toLowerCase();
-    if (!attending || !name) return;
-    if (meal === 'veg') veg++;
-    else if (meal === 'non-veg') nonVeg++;
-    mealDetails.push(name + ' (' + (meal === 'veg' ? 'Veg' : meal === 'non-veg' ? 'Non-Veg' : '-') + ')');
-  });
-
-  if (!names.length) throw new Error('Guest name is required');
-
   sheet.appendRow([
     new Date(),
+    safe_(name),
+    attendance === 'yes' ? 'Attending' : 'Not Attending',
     safe_(clean_(data.invitedAs, 120)),
-    safe_(names[0]),
-    attending ? 'Attending' : 'Not Attending',
-    attending ? (data.partyType === 'family' ? 'Family' : 'Individual') : '',
-    attending ? Number(data.guestCount) || names.length : 0,
-    safe_(names.join(', ')),
-    attending ? veg : '',
-    attending ? nonVeg : '',
-    safe_(mealDetails.join(', ')),
     safe_(clean_(data.pageUrl, 500)),
     safe_(clean_(data.userAgent, 500)),
   ]);
   formatLastRow_(sheet);
+
+  // Colour the attendance cell so it's easy to scan.
+  var cell = sheet.getRange(sheet.getLastRow(), 3);
+  if (attendance === 'yes') cell.setBackground('#F7DCE7').setFontColor('#8E2457').setFontWeight('bold');
+  else cell.setBackground('#ECE3EA').setFontColor('#4E1F45');
 }
 
 function saveWish_(ss, data) {

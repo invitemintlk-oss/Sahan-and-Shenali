@@ -175,7 +175,7 @@ function Monogram({ className = "" }: { className?: string }) {
   const octA = "181.3,133.7 133.7,181.3 66.3,181.3 18.7,133.7 18.7,66.3 66.3,18.7 133.7,18.7 181.3,66.3";
   const octB = "188,100 162.2,162.2 100,188 37.8,162.2 12,100 37.8,37.8 100,12 162.2,37.8";
   return (
-    <svg viewBox="0 0 200 200" className={className} aria-label="Shakila and Yasiru monogram" role="img">
+    <svg viewBox="0 0 200 200" className={className} aria-label="Sahan and Shenali monogram" role="img">
       <defs>
         <linearGradient id={`gold-${gid}`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#D8B57A" />
@@ -194,7 +194,7 @@ function Monogram({ className = "" }: { className?: string }) {
         S
       </text>
       <text x="100" y="146" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="50" fill={`url(#gold-${gid})`}>
-        Y
+        S
       </text>
     </svg>
   );
@@ -232,8 +232,8 @@ function RealisticPetal({ size = 20, className = "" }: { size?: number; classNam
       <svg width="100%" height="100%" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <radialGradient id="petalGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#C4714A" stopOpacity="0.85" />
-            <stop offset="100%" stopColor="#9C8470" stopOpacity="0.65" />
+            <stop offset="0%" stopColor="#B23A6B" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#8E5A7E" stopOpacity="0.65" />
           </radialGradient>
         </defs>
         <path
@@ -247,95 +247,40 @@ function RealisticPetal({ size = 20, className = "" }: { size?: number; classNam
 }
 
 type Attendance = "yes" | "no";
-type PartyType = "individual" | "family";
-type MealPreference = "veg" | "non-veg";
-
-type GuestEntry = {
-  name: string;
-  meal: MealPreference;
-};
 
 function RSVPForm({ invitedAs }: { invitedAs: string }) {
   const endpoint = SHEETS_ENDPOINT;
 
-  const [attendance, setAttendance] = useState<Attendance>("yes");
-  const [partyType, setPartyType] = useState<PartyType>("individual");
-  const [guestCount, setGuestCount] = useState<number>(1);
-  const [guests, setGuests] = useState<GuestEntry[]>([{ name: "", meal: "non-veg" }]);
-
+  const [name, setName] = useState(invitedAs);
+  const [attendance, setAttendance] = useState<Attendance | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const isAttending = attendance === "yes";
-  const effectiveGuestCount = partyType === "family" ? Math.max(2, guestCount) : 1;
-
-  useEffect(() => {
-    if (partyType === "individual") {
-      setGuestCount(1);
-      setGuests((prev) => [prev[0] ?? { name: "", meal: "non-veg" }]);
-      return;
-    }
-
-    setGuestCount((c) => (c < 2 ? 2 : c));
-  }, [partyType]);
-
-  useEffect(() => {
-    const desiredCount = partyType === "family" ? Math.max(2, guestCount) : 1;
-    setGuests((prev) => {
-      if (prev.length === desiredCount) return prev;
-      const next = prev.slice(0, desiredCount);
-      while (next.length < desiredCount) next.push({ name: "", meal: "non-veg" });
-      return next;
-    });
-  }, [guestCount, partyType]);
-
-  function updateGuest(index: number, patch: Partial<GuestEntry>) {
-    setGuests((prev) => prev.map((g, i) => (i === index ? { ...g, ...patch } : g)));
-  }
-
-  function validate(): string | null {
-    const primaryName = guests[0]?.name?.trim();
-    if (!primaryName) return "Please enter your name.";
-    if (attendance === "no") return null;
-
-    const missingName = guests.some((g) => !g.name.trim());
-    if (missingName) return "Please enter all guest names.";
-
-    return null;
-  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSuccessMessage(null);
     setErrorMessage(null);
 
-    const validationError = validate();
-    if (validationError) {
-      setErrorMessage(validationError);
+    if (!name.trim()) {
+      setErrorMessage("Please enter your name.");
       return;
     }
-
+    if (!attendance) {
+      setErrorMessage("Please select Attending or Not Attending.");
+      return;
+    }
     if (!endpoint) {
-      setErrorMessage("RSVP saving is not configured yet (missing VITE_RSVP_ENDPOINT).");
+      setErrorMessage("RSVP saving is not configured yet.");
       return;
     }
-
-    const payload = {
-      invitedAs,
-      attendance,
-      partyType: isAttending ? partyType : "",
-      guestCount: isAttending ? effectiveGuestCount : 0,
-      guests: (isAttending ? guests : [guests[0]]).map((g) => ({
-        name: g.name.trim(),
-        meal: isAttending ? g.meal : "",
-      })),
-    };
 
     setSubmitting(true);
     try {
-      await postToSheet("rsvp", payload);
-      setSuccessMessage("RSVP saved. Thank you!");
+      await postToSheet("rsvp", { name: name.trim(), attendance, invitedAs });
+      setSuccessMessage(
+        attendance === "yes" ? "Thank you! We can't wait to celebrate with you." : "Thank you for letting us know. You'll be missed!",
+      );
     } catch {
       setErrorMessage("Could not submit RSVP. Please try again.");
     } finally {
@@ -343,104 +288,47 @@ function RSVPForm({ invitedAs }: { invitedAs: string }) {
     }
   }
 
+  const choice = (value: Attendance, label: string) => (
+    <button
+      type="button"
+      data-no-flip
+      onClick={() => setAttendance(value)}
+      aria-pressed={attendance === value}
+      className={`py-3 md:py-2.5 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-bold border transition-colors ${
+        attendance === value
+          ? value === "yes"
+            ? "bg-sage text-white border-sage"
+            : "bg-umber text-white border-umber"
+          : "bg-white/40 text-sage border-sage/30"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <div data-no-flip className="w-full cursor-auto">
+    <div data-no-flip className="w-full cursor-auto my-auto">
       <CheckCircle2 size={24} className="text-sage mb-2 md:mb-4 mx-auto opacity-70 md:w-8 md:h-8" />
       <h4 className="serif text-2xl md:text-3xl text-sage mb-2 md:mb-3 text-center">RSVP</h4>
       <p className="text-[10px] md:text-xs text-zinc-500 uppercase tracking-widest mb-4 md:mb-6 text-center leading-relaxed">
         Please let us know by
         <br />
-        27.01.2027
+        21.07.2027
       </p>
 
-      <form onSubmit={submit} className="space-y-4 md:space-y-4 px-1 md:px-2">
+      <form onSubmit={submit} className="space-y-4 px-1 md:px-2 max-w-sm mx-auto">
+        <input
+          data-no-flip
+          value={name}
+          onChange={(ev) => setName(ev.target.value)}
+          placeholder="Your name"
+          maxLength={100}
+          className="w-full rounded-xl border border-sage/20 bg-white/60 px-3 py-2.5 text-xs md:text-sm text-zinc-700 outline-none focus:border-sage/50"
+        />
+
         <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            data-no-flip
-            onClick={() => setAttendance("yes")}
-            className={`py-3 md:py-2.5 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-bold border transition-colors ${attendance === "yes" ? "bg-sage text-white border-sage" : "bg-white/40 text-sage border-sage/30"
-              }`}
-          >
-            Attending
-          </button>
-          <button
-            type="button"
-            data-no-flip
-            onClick={() => setAttendance("no")}
-            className={`py-3 md:py-2.5 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-bold border transition-colors ${attendance === "no" ? "bg-zinc-800 text-white border-zinc-800" : "bg-white/40 text-zinc-700 border-zinc-300/60"
-              }`}
-          >
-            Not Attending
-          </button>
-        </div>
-
-        <div className={`grid grid-cols-2 gap-2 ${!isAttending ? "opacity-60 pointer-events-none" : ""}`}>
-          <button
-            type="button"
-            data-no-flip
-            onClick={() => setPartyType("individual")}
-            className={`py-3 md:py-2 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-bold border transition-colors ${partyType === "individual" ? "bg-sage/90 text-white border-sage" : "bg-white/40 text-sage border-sage/30"
-              }`}
-          >
-            Individual
-          </button>
-          <button
-            type="button"
-            data-no-flip
-            onClick={() => setPartyType("family")}
-            className={`py-3 md:py-2 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-bold border transition-colors ${partyType === "family" ? "bg-sage/90 text-white border-sage" : "bg-white/40 text-sage border-sage/30"
-              }`}
-          >
-            Family
-          </button>
-        </div>
-
-        {isAttending && partyType === "family" && (
-          <div className="flex items-center justify-between gap-3">
-            <label className="text-[10px] md:text-xs uppercase tracking-widest font-bold text-zinc-600">Family Count</label>
-            <input
-              data-no-flip
-              type="number"
-              min={2}
-              max={12}
-              value={effectiveGuestCount}
-              onChange={(ev) => setGuestCount(Number(ev.target.value || 2))}
-              className="w-28 rounded-xl border border-sage/20 bg-white/60 px-3 py-2.5 text-xs text-zinc-700 outline-none"
-            />
-          </div>
-        )}
-
-        <div className="space-y-2">
-          {(isAttending ? guests : [guests[0]]).map((guest, idx) => (
-            <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_140px] gap-2">
-              <input
-                data-no-flip
-                value={guest?.name ?? ""}
-                onChange={(ev) => updateGuest(idx, { name: ev.target.value })}
-                placeholder={
-                  isAttending
-                    ? partyType === "family"
-                      ? `Guest ${idx + 1} name`
-                      : "Your name"
-                    : "Your name"
-                }
-                className="w-full rounded-xl border border-sage/20 bg-white/60 px-3 py-2.5 text-xs text-zinc-700 outline-none"
-              />
-
-              <select
-                data-no-flip
-                disabled={!isAttending}
-                value={guest?.meal ?? "non-veg"}
-                onChange={(ev) => updateGuest(idx, { meal: ev.target.value as MealPreference })}
-                className={`w-full rounded-xl border border-sage/20 bg-white/60 px-3 py-2.5 text-xs text-zinc-700 outline-none ${!isAttending ? "opacity-60" : ""
-                  }`}
-              >
-                <option value="veg">Veg</option>
-                <option value="non-veg">Non-Veg</option>
-              </select>
-            </div>
-          ))}
+          {choice("yes", "Attending")}
+          {choice("no", "Not Attending")}
         </div>
 
         {errorMessage && <p className="text-[10px] md:text-xs text-red-700 font-semibold">{errorMessage}</p>}
@@ -450,13 +338,13 @@ function RSVPForm({ invitedAs }: { invitedAs: string }) {
           type="submit"
           data-no-flip
           disabled={submitting}
-          className="w-full bg-sage text-white py-3 md:py-3 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-bold disabled:opacity-60"
+          className="w-full bg-sage hover:bg-umber text-white py-3 rounded-xl text-[10px] md:text-xs uppercase tracking-widest font-bold transition-colors disabled:opacity-60"
         >
           {submitting ? "Submitting..." : "Submit RSVP"}
         </button>
 
         {!endpoint && (
-          <p className="text-[10px] md:text-[10px] text-zinc-500 leading-relaxed">
+          <p className="text-[10px] text-zinc-500 leading-relaxed">
             Admin setup needed: set <span className="font-bold">VITE_SHEETS_ENDPOINT</span> to your Google Apps Script URL.
           </p>
         )}
@@ -521,7 +409,7 @@ function WishesSection({ defaultName }: { defaultName: string }) {
             <Heart className="mx-auto text-sage/70 mb-2" size={26} />
             <h3 className="serif text-3xl md:text-5xl text-umber">Wishes for the Couple</h3>
             <OrnamentDivider className="mt-3" tone="text-taupe" />
-            <p className="serif italic text-taupe text-sm md:text-lg mt-3">Leave a few words of love for Shakila &amp; Yasiru</p>
+            <p className="serif italic text-taupe text-sm md:text-lg mt-3">Leave a few words of love for Sahan &amp; Shenali</p>
           </div>
 
           <form onSubmit={submit} className="space-y-3">
@@ -667,7 +555,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
             className="fixed inset-0 z-[100] bg-paper/95 backdrop-blur-md flex flex-col items-center justify-center p-6 overflow-hidden"
           >
             {/* soft vignette + fine double frame for an editorial, elegant feel */}
-            <div className="absolute inset-0 pointer-events-none z-[1] bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(107,61,40,0.14)_100%)]" />
+            <div className="absolute inset-0 pointer-events-none z-[1] bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(78,31,69,0.14)_100%)]" />
             <div className="absolute inset-3 md:inset-6 border border-taupe/30 rounded-[1.25rem] pointer-events-none z-[1]" />
             <div className="absolute inset-[18px] md:inset-[34px] border border-taupe/15 rounded-[1rem] pointer-events-none z-[1]" />
 
@@ -702,7 +590,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                   opacity: [0.6, 0.9, 0.6],
                 }}
                 transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-[30%] -left-[20%] w-[140%] h-[140%] rounded-full bg-[radial-gradient(circle,rgba(196,113,74,0.45)_0%,transparent_60%)] blur-3xl"
+                className="absolute -top-[30%] -left-[20%] w-[140%] h-[140%] rounded-full bg-[radial-gradient(circle,rgba(178,58,107,0.45)_0%,transparent_60%)] blur-3xl"
               />
               <motion.div
                 animate={{
@@ -711,7 +599,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                   opacity: [0.5, 0.8, 0.5],
                 }}
                 transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -bottom-[30%] -right-[20%] w-[140%] h-[140%] rounded-full bg-[radial-gradient(circle,rgba(156,132,112,0.4)_0%,transparent_60%)] blur-3xl"
+                className="absolute -bottom-[30%] -right-[20%] w-[140%] h-[140%] rounded-full bg-[radial-gradient(circle,rgba(142,90,126,0.4)_0%,transparent_60%)] blur-3xl"
               />
 
               {!reduceEffects &&
@@ -741,9 +629,9 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                       <Flower2 className="text-sage/20 w-4 h-4 md:w-6 md:h-6" />
                     ) : (
                       <div
-                        className="rounded-full shadow-[0_0_15px_rgba(196,113,74,0.4)]"
+                        className="rounded-full shadow-[0_0_15px_rgba(178,58,107,0.4)]"
                         style={{
-                          backgroundColor: i % 2 === 0 ? "#C4714A" : "#A84C2C",
+                          backgroundColor: i % 2 === 0 ? "#B23A6B" : "#8E2457",
                           width: Math.random() * 6 + 2 + "px",
                           height: Math.random() * 6 + 2 + "px",
                           filter: `blur(${Math.random() * 1}px)`,
@@ -794,7 +682,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                     key={`bokeh-${i}`}
                     className="absolute rounded-full mix-blend-soft-light"
                     style={{
-                      backgroundColor: i % 2 === 0 ? "#9C8470" : "#F5EFE0",
+                      backgroundColor: i % 2 === 0 ? "#8E5A7E" : "#FBF1F4",
                       opacity: 0.3,
                       width: Math.random() * 150 + 100 + "px",
                       height: Math.random() * 150 + 100 + "px",
@@ -826,13 +714,13 @@ export default function App({ guestName = "" }: { guestName?: string }) {
             >
               <p className="serif italic text-sm md:text-lg text-taupe tracking-[0.15em]">The wedding of</p>
               <h1 className="mt-2 md:mt-3 flex items-baseline justify-center gap-3 md:gap-5 leading-none">
-                <span className="script text-[3.2rem] sm:text-6xl md:text-8xl text-rust drop-shadow-[0_2px_6px_rgba(168,76,44,0.15)]">Shakila</span>
+                <span className="script text-[3.2rem] sm:text-6xl md:text-8xl text-rust drop-shadow-[0_2px_6px_rgba(142,36,87,0.15)]">Sahan</span>
                 <span className="serif italic text-2xl md:text-4xl text-taupe">&amp;</span>
-                <span className="script text-[3.2rem] sm:text-6xl md:text-8xl text-rust drop-shadow-[0_2px_6px_rgba(168,76,44,0.15)]">Yasiru</span>
+                <span className="script text-[3.2rem] sm:text-6xl md:text-8xl text-rust drop-shadow-[0_2px_6px_rgba(142,36,87,0.15)]">Shenali</span>
               </h1>
               <OrnamentDivider className="mt-4 md:mt-6" tone="text-taupe" />
               <p className="serif mt-3 md:mt-4 text-xs md:text-base uppercase tracking-[0.45em] text-umber font-medium">
-                27 · February · 2027
+                21 · August · 2027
               </p>
               {guestName && (
                 <p className="serif italic mt-4 md:mt-5 text-sm md:text-lg text-umber/90">
@@ -846,7 +734,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
               style={{ perspective: 1500 }}
               animate={!reduceEffects && !isFlapOpen ? { y: [0, -8, 0] } : {}}
               transition={!reduceEffects ? { duration: 5, repeat: Infinity, ease: "easeInOut" } : { duration: 0 }}
-              className="relative w-full max-w-xl h-64 sm:h-72 md:h-[380px] rounded-[1.75rem] shadow-[0_34px_80px_-22px_rgba(61,34,21,0.55)] z-10 overflow-hidden"
+              className="relative w-full max-w-xl h-64 sm:h-72 md:h-[380px] rounded-[1.75rem] shadow-[0_34px_80px_-22px_rgba(58,20,52,0.55)] z-10 overflow-hidden"
             >
               {/* envelope material */}
               <div className="absolute inset-0 bg-gradient-to-b from-sage via-sage/90 to-rust" />
@@ -887,10 +775,10 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                     className="absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 group"
                   >
                     <div className="w-20 h-20 md:w-28 md:h-28 rounded-full p-1 bg-gradient-to-br from-rust to-umber shadow-[0_14px_34px_-10px_rgba(0,0,0,0.6)] group-hover:scale-105 transition-transform duration-500">
-                      <div className="w-full h-full rounded-full bg-gradient-to-br from-[#B85A36] to-[#7A3A22] shadow-[inset_0_-6px_14px_rgba(0,0,0,0.35),inset_0_4px_10px_rgba(255,255,255,0.18)] flex items-center justify-center border border-white/10">
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-[#A8346A] to-[#5E1E4C] shadow-[inset_0_-6px_14px_rgba(0,0,0,0.35),inset_0_4px_10px_rgba(255,255,255,0.18)] flex items-center justify-center border border-white/10">
                         <div className="w-[78%] h-[78%] rounded-full border border-sand/40 flex items-center justify-center">
                           <span className="serif text-paper/90 text-xl md:text-3xl tracking-wider leading-none">
-                            S<span className="italic text-sand/90 mx-0.5">&amp;</span>Y
+                            S<span className="italic text-sand/90 mx-0.5">&amp;</span>S
                           </span>
                         </div>
                       </div>
@@ -918,7 +806,12 @@ export default function App({ guestName = "" }: { guestName?: string }) {
       </AnimatePresence>
 
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <img src="/background1.png" alt="Background" className="w-full h-full object-cover opacity-[0.35] md:opacity-[0.45]" />
+        <img
+          src="/background1.png"
+          alt=""
+          className="w-full h-full object-cover opacity-[0.35] md:opacity-[0.45]"
+          style={{ filter: "hue-rotate(-45deg) saturate(1.05)" }}
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-paper/40 via-transparent to-paper/40" />
       </div>
 
@@ -958,7 +851,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-32 bg-sage/5 blur-3xl rounded-full" />
 
             <motion.h2 whileHover={{ scale: 1.05 }} className="script text-[13vw] sm:text-6xl md:text-9xl text-sage drop-shadow-lg relative z-10 leading-none">
-              Shakila
+              Sahan
             </motion.h2>
 
             <div className="relative flex items-center justify-center shrink-0">
@@ -975,7 +868,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
             </div>
 
             <motion.h2 whileHover={{ scale: 1.05 }} className="script text-[13vw] sm:text-6xl md:text-9xl text-sage drop-shadow-lg relative z-10 leading-none">
-              Yasiru
+              Shenali
             </motion.h2>
           </div>
 
@@ -1013,7 +906,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
               <div className="absolute inset-x-8 top-[20%] h-56 bg-sage/20 blur-[80px] rounded-full pointer-events-none" />
 
               {/* envelope back + opened flap (behind the card) */}
-              <div className="absolute bottom-0 left-0 right-0 h-[230px] md:h-[320px] rounded-b-[2rem] z-0 shadow-[0_24px_70px_-12px_rgba(61,34,21,0.55)]">
+              <div className="absolute bottom-0 left-0 right-0 h-[230px] md:h-[320px] rounded-b-[2rem] z-0 shadow-[0_24px_70px_-12px_rgba(58,20,52,0.55)]">
                 <div className="absolute inset-0 rounded-b-[2rem] bg-gradient-to-b from-umber via-rust/60 to-sienna/70" />
                 <div className="absolute inset-0 rounded-b-[2rem] opacity-20 bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]" />
                 <div
@@ -1032,7 +925,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                 transition={{ duration: 1.4, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
                 className="relative z-10 mx-3 sm:mx-8 md:mx-16"
               >
-                <div className="relative bg-paper rounded-[1.4rem] md:rounded-[1.75rem] shadow-[0_-18px_60px_rgba(61,34,21,0.18),0_10px_30px_rgba(0,0,0,0.08)] border border-sand/50 overflow-hidden">
+                <div className="relative bg-paper rounded-[1.4rem] md:rounded-[1.75rem] shadow-[0_-18px_60px_rgba(58,20,52,0.18),0_10px_30px_rgba(0,0,0,0.08)] border border-sand/50 overflow-hidden">
                   {/* paper + frames */}
                   <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
@@ -1048,7 +941,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                         <svg viewBox="0 0 28 28" fill="none" className={`w-full h-full ${rot} opacity-60`}>
                           <path d="M2 2 C2 2, 14 2, 14 14" stroke="#A8804A" strokeWidth="0.8" />
                           <path d="M2 2 C8 2, 2 8, 2 14" stroke="#A8804A" strokeWidth="0.8" />
-                          <circle cx="4" cy="4" r="1.3" fill="#C4714A" opacity="0.7" />
+                          <circle cx="4" cy="4" r="1.3" fill="#B23A6B" opacity="0.7" />
                         </svg>
                       </div>
                     ))}
@@ -1062,11 +955,11 @@ export default function App({ guestName = "" }: { guestName?: string }) {
 
                     <div className="mt-3 md:mt-4 space-y-1">
                       <p className="serif text-[13px] sm:text-sm md:text-lg uppercase tracking-[0.2em] text-umber font-medium">
-                        Mr. &amp; Mrs. Sunil Wickramasinghe
+                        Mr. &amp; Mrs. Prince Perera
                       </p>
                       <p className="serif italic text-taupe text-sm md:text-base">and</p>
                       <p className="serif text-[13px] sm:text-sm md:text-lg uppercase tracking-[0.2em] text-umber font-medium">
-                        Mr. &amp; Mrs. Ranjith Jayawardena
+                        Mr. &amp; Mrs. Roshan Fernando
                       </p>
                     </div>
 
@@ -1075,9 +968,9 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                     </p>
 
                     <div className="mt-4 md:mt-6 flex flex-col sm:flex-row items-center justify-center gap-0 sm:gap-5 leading-none">
-                      <span className="script text-[3.2rem] sm:text-6xl md:text-7xl text-rust">Shakila</span>
+                      <span className="script text-[3.2rem] sm:text-6xl md:text-7xl text-rust">Sahan</span>
                       <span className="serif italic text-2xl md:text-3xl text-taupe my-1 sm:my-0">&amp;</span>
-                      <span className="script text-[3.2rem] sm:text-6xl md:text-7xl text-rust">Yasiru</span>
+                      <span className="script text-[3.2rem] sm:text-6xl md:text-7xl text-rust">Shenali</span>
                     </div>
 
                     <OrnamentDivider className="mt-5 md:mt-7" tone="text-taupe" />
@@ -1088,18 +981,24 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                         Saturday
                       </p>
                       <div className="flex flex-col items-center px-1">
-                        <span className="serif text-[11px] md:text-sm uppercase tracking-[0.3em] text-taupe">February</span>
-                        <span className="serif text-5xl md:text-6xl text-rust font-medium leading-none my-1">27</span>
+                        <span className="serif text-[11px] md:text-sm uppercase tracking-[0.3em] text-taupe">August</span>
+                        <span className="serif text-5xl md:text-6xl text-rust font-medium leading-none my-1">21</span>
                         <span className="serif text-[11px] md:text-sm uppercase tracking-[0.3em] text-taupe">2027</span>
                       </div>
                       <p className="serif text-xs md:text-base uppercase tracking-[0.25em] text-umber border-y border-taupe/40 py-2">
-                        7:15 PM
+                        4:00 PM
                       </p>
                     </div>
 
                     <div className="mt-5 md:mt-7">
-                      <p className="serif text-sm md:text-lg uppercase tracking-[0.22em] text-umber font-medium">Grand Ballroom</p>
-                      <p className="serif italic text-taupe text-sm md:text-base mt-0.5">Waters Edge, Battaramulla</p>
+                      <p className="serif text-sm md:text-lg uppercase tracking-[0.22em] text-umber font-medium">St. Sebastian&rsquo;s Church</p>
+                      <p className="serif italic text-taupe text-sm md:text-base mt-0.5">Katuwapitiya, Negombo</p>
+                    </div>
+
+                    <div className="mt-4 md:mt-5 pt-4 md:pt-5 border-t border-taupe/25 w-full max-w-sm">
+                      <p className="serif italic text-taupe text-sm md:text-base">followed by the reception at</p>
+                      <p className="serif text-sm md:text-lg uppercase tracking-[0.22em] text-umber font-medium mt-1">Ranowell Hotel</p>
+                      <p className="serif italic text-taupe text-sm md:text-base mt-0.5">Kochchikade, Negombo &middot; 7:00 PM</p>
                     </div>
                   </div>
                 </div>
@@ -1145,7 +1044,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
             className="w-full h-full col-span-2 lg:col-span-2"
           >
             <div className="w-full h-[220px] md:h-[350px] lg:h-[350px] relative overflow-hidden rounded-[2rem] shadow-2xl border border-white/40 ring-1 ring-black/5">
-              <div className="w-full h-full bg-[#F5EFE0] p-2 md:p-8 flex flex-col items-center justify-center text-center space-y-2 md:space-y-4 relative group">
+              <div className="w-full h-full bg-[#FBF1F4] p-2 md:p-8 flex flex-col items-center justify-center text-center space-y-2 md:space-y-4 relative group">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')] opacity-40 pointer-events-none" />
                 <div className="relative z-10 space-y-2 md:space-y-8 scale-[0.9] md:scale-100">
                   <div className="space-y-1">
@@ -1156,16 +1055,16 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                   <div className="flex flex-col items-center">
                     <p className="text-[8px] md:text-xs uppercase tracking-[0.4em] text-zinc-400 font-black mb-1 md:mb-2">Saturday</p>
                     <div className="relative inline-block px-6 md:px-8 py-1 md:py-2 border-y border-sage/30">
-                      <p className="serif text-5xl md:text-8xl font-medium text-sage leading-none">27</p>
+                      <p className="serif text-5xl md:text-8xl font-medium text-sage leading-none">21</p>
                       <motion.div
                         animate={{ opacity: [0.4, 1, 0.4] }}
                         transition={{ repeat: Infinity, duration: 2 }}
-                        className="absolute -top-1 -right-1 text-[#A84C2C]"
+                        className="absolute -top-1 -right-1 text-[#8E2457]"
                       >
                         <Sparkles size={12} className="md:w-4 md:h-4" />
                       </motion.div>
                     </div>
-                    <p className="serif text-sm md:text-2xl font-light tracking-[0.2em] mt-2 md:mt-3">FEBRUARY</p>
+                    <p className="serif text-sm md:text-2xl font-light tracking-[0.2em] mt-2 md:mt-3">AUGUST</p>
                   </div>
 
                   <div className="pt-1">
@@ -1190,7 +1089,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
             <FlipCard
               containerClassName="w-full h-[380px] md:h-[350px] lg:h-[350px]"
               front={
-                <div className="w-full h-full bg-[#F5EFE0] p-6 flex flex-col justify-center items-center text-center relative group overflow-hidden">
+                <div className="w-full h-full bg-[#FBF1F4] p-6 flex flex-col justify-center items-center text-center relative group overflow-hidden">
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-sage/10 rounded-full blur-3xl pointer-events-none" />
                   <div className="relative z-10 space-y-3 md:space-y-6">
                     <div className="flex flex-col items-center gap-1">
@@ -1204,7 +1103,7 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                     >
                       <Monogram className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 drop-shadow-md" />
                     </motion.div>
-                    <p className="text-[10px] md:text-xs uppercase tracking-[0.4em] text-zinc-400 font-bold mt-1">by 27.01.2027</p>
+                    <p className="text-[10px] md:text-xs uppercase tracking-[0.4em] text-zinc-400 font-bold mt-1">by 21.07.2027</p>
                   </div>
                 </div>
               }
@@ -1224,62 +1123,75 @@ export default function App({ guestName = "" }: { guestName?: string }) {
             className="w-full h-full col-span-2 lg:col-span-2"
           >
             <FlipCard
-              containerClassName="w-full h-[300px] md:h-[350px] lg:h-[350px]"
+              containerClassName="w-full h-[400px] md:h-[350px] lg:h-[350px]"
               front={
                 <div className="w-full h-full relative group">
                   <img
-                    src="https://www.watersedge.lk/wp-content/uploads/2026/01/004A2024-1024x1536.jpg"
-                    alt="Waters Edge Grand Ballroom"
+                    src="/Ballroom-2-768x512.jpg"
+                    alt="Wedding venues"
                     className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                    referrerPolicy="no-referrer"
+                    style={{ filter: "hue-rotate(-40deg) saturate(0.9)" }}
                   />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-500" />
-                  <div className="absolute top-6 right-6 md:top-10 md:right-10 bg-white/60 backdrop-blur-md p-4 md:p-8 border border-white/60 rounded-2xl group-hover:bg-white/80 transition-all duration-700 shadow-xl">
-                    <p className="serif text-[8px] md:text-xs uppercase tracking-[0.4em] text-sage/80 mb-2 flex items-center gap-2">
-                      <span className="w-4 h-px bg-sage/30" />
-                      The Location
+                  <div className="absolute inset-0 bg-gradient-to-t from-umber/80 via-umber/30 to-umber/10" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+                    <p className="serif text-[10px] md:text-xs uppercase tracking-[0.4em] text-white/85 mb-2 flex items-center gap-2">
+                      <span className="w-6 h-px bg-white/50" />
+                      The Venues
+                      <span className="w-6 h-px bg-white/50" />
                     </p>
-                    <h3 className="serif text-2xl md:text-5xl text-sage leading-tight drop-shadow-sm font-medium">
-                      Waters Edge
-                      <br />
-                      Grand Ballroom
+                    <h3 className="serif text-2xl md:text-4xl text-white leading-tight drop-shadow-md">
+                      St. Sebastian&rsquo;s Church
                     </h3>
-
-                    <motion.button
-                      data-no-flip
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => window.open("https://maps.app.goo.gl/3EQ7xzj3EX9T2xEx6", "_blank")}
-                      className="mt-3 md:mt-5 px-5 py-2 md:px-7 md:py-3 bg-sage text-white rounded-full text-[9px] md:text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors"
-                    >
-                      View Map
-                    </motion.button>
+                    <p className="serif italic text-white/80 text-sm md:text-base mt-1">Katuwapitiya &middot; 4:00 PM</p>
+                    <div className="my-3 md:my-4 w-10 h-px bg-white/50" />
+                    <h3 className="serif text-2xl md:text-4xl text-white leading-tight drop-shadow-md">Ranowell Hotel</h3>
+                    <p className="serif italic text-white/80 text-sm md:text-base mt-1">Negombo &middot; 7:00 PM</p>
                   </div>
-
-                  <div className="absolute bottom-6 left-6 md:bottom-10 md:left-10 text-sage flex items-center gap-3 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/60 shadow-lg">
-                    <MapPin className="text-sage animate-bounce" size={16} />
-                    <p className="serif text-[10px] md:text-sm tracking-[0.2em] font-bold uppercase">Waters Edge</p>
+                  <div className="absolute bottom-6 left-0 right-0 flex justify-center">
+                    <div className="flex items-center gap-2 bg-white/70 backdrop-blur-md px-4 py-2 rounded-full border border-white/60 shadow-lg text-sage">
+                      <MapPin size={16} className="animate-bounce" />
+                      <p className="serif text-[10px] md:text-sm tracking-[0.2em] font-bold uppercase">Negombo</p>
+                    </div>
                   </div>
                 </div>
               }
               back={
-                <>
-                  <MapPin size={24} className="text-sage mb-4 md:mb-6 opacity-70 md:w-9 md:h-9" />
-                  <h4 className="serif text-2xl md:text-4xl text-sage mb-2 md:mb-4">Waters Edge Grand Ballroom</h4>
-                  <p className="text-[10px] md:text-sm text-zinc-500 uppercase tracking-widest leading-loose mb-4 md:mb-6">
-                    Waters Edge
-                    <br />
-                    Grand Ballroom
-                  </p>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => window.open("https://maps.app.goo.gl/3EQ7xzj3EX9T2xEx6", "_blank")}
-                    className="px-6 py-2 md:px-8 md:py-3 bg-sage text-white rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors"
-                  >
-                    View Map
-                  </motion.button>
-                </>
+                <div className="w-full flex flex-col items-center gap-4 md:gap-5 px-2 my-auto">
+                  <MapPin size={24} className="text-sage opacity-70 md:w-8 md:h-8" />
+                  {[
+                    {
+                      label: "Church Ceremony · 4:00 PM",
+                      name: "St. Sebastian’s Church",
+                      address: "Katuwapitiya, Negombo",
+                      href: "https://www.google.com/maps/search/?api=1&query=St.%20Sebastian%27s%20Church%20Katuwapitiya%20Negombo",
+                      button: "Church Map",
+                    },
+                    {
+                      label: "Reception · 7:00 PM",
+                      name: "Ranowell Hotel",
+                      address: "162/4 Chilaw Road, Kochchikade, Negombo",
+                      href: "https://www.google.com/maps/search/?api=1&query=Ranowell%20Hotel%2C%20162%2F4%20Chilaw%20Road%2C%20Kochchikade%2C%20Negombo",
+                      button: "Hotel Map",
+                    },
+                  ].map((v, i) => (
+                    <div key={v.name} className={`w-full max-w-sm ${i > 0 ? "pt-4 md:pt-5 border-t border-sage/15" : ""}`}>
+                      <p className="text-[9px] md:text-[11px] uppercase tracking-[0.3em] font-bold text-taupe">{v.label}</p>
+                      <h4 className="serif text-xl md:text-3xl text-sage mt-1">{v.name}</h4>
+                      <p className="text-[10px] md:text-xs text-zinc-500 tracking-wider mt-1">{v.address}</p>
+                      <motion.a
+                        data-no-flip
+                        href={v.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="inline-block mt-2 md:mt-3 px-5 py-2 md:px-7 md:py-2.5 bg-sage text-white rounded-full text-[9px] md:text-xs font-bold uppercase tracking-widest hover:bg-umber transition-colors"
+                      >
+                        {v.button}
+                      </motion.a>
+                    </div>
+                  ))}
+                </div>
               }
             />
           </motion.div>
@@ -1326,17 +1238,20 @@ export default function App({ guestName = "" }: { guestName?: string }) {
                   <Clock size={24} className="text-sage mb-4 md:mb-6 opacity-70 md:w-8 md:h-8" />
                   <h4 className="serif text-2xl md:text-3xl text-sage mb-4 md:mb-8">Timeline</h4>
 
-                  <div className="w-full max-w-sm space-y-4 md:space-y-6 text-left">
-                    <div className="flex items-start gap-2 md:gap-4">
-                      <span className="serif text-sage font-bold text-[10px] md:text-base w-12 md:w-20 text-right shrink-0 pt-1">7:45 PM</span>
-                      <div className="w-px h-full bg-sage/30 relative mt-2 -ml-[1px] md:-ml-2 shrink-0">
-                        <div className="absolute top-0 -left-[3px] w-2 h-2 rounded-full bg-sage" />
+                  <div className="w-full max-w-sm space-y-5 md:space-y-7 text-left">
+                    {[
+                      { time: "4:00 PM", title: "Church Ceremony", sub: "St. Sebastian’s Church, Katuwapitiya" },
+                      { time: "7:00 PM", title: "Wedding Reception", sub: "Ranowell Hotel, Negombo" },
+                    ].map((t) => (
+                      <div key={t.time} className="flex items-start gap-3 md:gap-4">
+                        <span className="serif text-sage font-bold text-xs md:text-base w-14 md:w-20 text-right shrink-0 pt-0.5">{t.time}</span>
+                        <span className="mt-1.5 w-2 h-2 rounded-full bg-sage shrink-0" />
+                        <div>
+                          <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider">{t.title}</p>
+                          <p className="serif text-[11px] md:text-sm italic text-zinc-500">{t.sub}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Wedding Ceremony</p>
-                        <p className="serif text-[10px] md:text-xs italic text-zinc-500">Followed by Dinner</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               }

@@ -2,14 +2,15 @@
 @import "tailwindcss";
 
 /* =============================================
-   BOHO COLOR PALETTE
-   Ivory    #F5EFE0  — background / paper
-   Sand     #C9B99A  — light neutral accent
-   Taupe    #9C8470  — mid-tone text/borders
-   Terra    #C4714A  — primary accent (replaces sage)
-   Rust     #A84C2C  — deep accent / hover
-   Umber    #6B3D28  — dark rich tones
-   Sienna   #8B4513  — warm earthy accent
+   BERRY PINK & PLUM PALETTE
+   Blush    #FBF1F4  — background / paper
+   Rose     #E6C3D2  — light accent (sand)
+   Mauve    #8E5A7E  — mid-tone text/borders (taupe)
+   Berry    #B23A6B  — primary accent (sage)
+   Deep berry #8E2457 — deep accent / hover (rust)
+   Plum     #4E1F45  — dark rich tones (umber)
+   Wine plum #6B2A5E — secondary dark (sienna)
+   (Token names kept so existing classes keep working.)
    ============================================= */
 
 @theme {
@@ -18,22 +19,22 @@
   --font-sans: "Inter", sans-serif;
 
   /* Primary accent — drives all `sage` classes */
-  --color-sage:   #C4714A;   /* Terracotta */
+  --color-sage:   #B23A6B;   /* Berry pink */
 
   /* Background — drives all `paper` classes */
-  --color-paper:  #F5EFE0;   /* Ivory */
+  --color-paper:  #FBF1F4;   /* Blush */
 
   /* Extended boho palette */
-  --color-sand:   #C9B99A;
-  --color-taupe:  #9C8470;
-  --color-rust:   #A84C2C;
-  --color-umber:  #6B3D28;
-  --color-sienna: #8B4513;
+  --color-sand:   #E6C3D2;
+  --color-taupe:  #8E5A7E;
+  --color-rust:   #8E2457;
+  --color-umber:  #4E1F45;
+  --color-sienna: #6B2A5E;
 }
 
 body {
   background-color: var(--color-paper);
-  color: #3D2B1F;
+  color: #3A1934;
   font-family: var(--font-sans);
 }
 

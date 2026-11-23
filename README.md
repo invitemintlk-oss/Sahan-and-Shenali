@@ -1,4 +1,6 @@
-# Wedding Invitation Website
+# Sahan & Shenali · Wedding Invitation
+
+Saturday 21 August 2027 · Church 4:00 PM (St. Sebastian's Church, Katuwapitiya) · Reception 7:00 PM (Ranowell Hotel, Negombo) · RSVP by 21.07.2027
 
 ## Run locally
 
@@ -29,7 +31,7 @@ https://docs.google.com/spreadsheets/d/19vBufqGiKGF_m6HpOXyWaK2dWhsP3ad9am_dSz7-
 
 It creates two sheets with styled header rows automatically:
 
-- **RSVP**: Submitted At, Invited As, Primary Guest, Attendance, Party Type, Guest Count, Guest Names, Veg Meals, Non-Veg Meals, Meal Details, Page URL, User Agent
+- **RSVP**: Submitted At, Name, Attendance, Invited As, Page URL, User Agent
 - **Wishes**: Submitted At, Name, Message, Invited As, Show on Website (checkbox), Page URL, User Agent
 
 To hide a wish from the website, untick its **Show on Website** box.

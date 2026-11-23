@@ -1,8 +1,8 @@
 // Single source of truth for the couple's details.
 // The invitation, the /admin link generator and the WhatsApp message all read from here.
 export const WEDDING = {
-  groomName: "Yasiru",
-  brideName: "Shakila",
+  groomName: "Sahan",
+  brideName: "Shenali",
 } as const;
 
 // Google Apps Script Web App URL (ends with /exec). Handles both RSVP and Wishes.
