@@ -35,7 +35,7 @@ It creates two sheets with styled header rows automatically:
 - **RSVP**: Submitted At, Name, Attendance, Invited As, Page URL, User Agent
 - **Wishes**: Submitted At, Name, Message, Invited As, Show on Website (checkbox), Page URL, User Agent
 
-To hide a wish from the website, untick its **Show on Website** box.
+Wishes are only saved to the sheet; they are not shown on the invitation.
 
 ### Setup
 

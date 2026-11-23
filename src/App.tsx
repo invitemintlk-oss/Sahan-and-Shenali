@@ -20,7 +20,7 @@ import {
   Send,
 } from "lucide-react";
 import { SHEETS_ENDPOINT } from "./config";
-import { postToSheet, fetchWishes, Wish } from "./sheets";
+import { postToSheet } from "./sheets";
 
 // FlipCard Component with 3D Tilt Effect + Premium Mobile Tap Hint
 function FlipCard({
@@ -356,21 +356,8 @@ function RSVPForm({ invitedAs }: { invitedAs: string }) {
 function WishesSection({ defaultName }: { defaultName: string }) {
   const [name, setName] = useState(defaultName);
   const [message, setMessage] = useState("");
-  const [wishes, setWishes] = useState<Wish[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    fetchWishes()
-      .then((w) => {
-        if (alive) setWishes(w);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -384,7 +371,6 @@ function WishesSection({ defaultName }: { defaultName: string }) {
     setSubmitting(true);
     try {
       await postToSheet("wish", { name: n, message: m, invitedAs: defaultName });
-      setWishes((prev) => [{ name: n, message: m, submittedAt: new Date().toISOString() }, ...prev]);
       setMessage("");
       setStatus({ ok: true, text: "Thank you for your lovely wishes!" });
     } catch {
@@ -438,16 +424,6 @@ function WishesSection({ defaultName }: { defaultName: string }) {
             </button>
           </form>
 
-          {wishes.length > 0 && (
-            <div className="mt-8 space-y-3 max-h-96 overflow-y-auto pr-1 ios-scroll">
-              {wishes.map((w, i) => (
-                <div key={`${w.submittedAt}-${i}`} className="rounded-2xl bg-white/60 border border-sand/40 px-4 py-3 text-left">
-                  <p className="serif text-base md:text-lg text-zinc-700 leading-relaxed whitespace-pre-line break-words">“{w.message}”</p>
-                  <p className="text-[10px] md:text-xs uppercase tracking-widest font-bold text-sage mt-2">— {w.name}</p>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </motion.section>

@@ -1,7 +1,5 @@
 import { SHEETS_ENDPOINT } from "./config";
 
-export type Wish = { name: string; message: string; submittedAt: string };
-
 /**
  * POST a record to the Apps Script Web App.
  * text/plain keeps it a "simple" CORS request (no preflight, which Apps Script can't answer).
@@ -35,12 +33,4 @@ export async function postToSheet(type: "rsvp" | "wish", data: Record<string, un
 
   const json = await res.json().catch(() => null);
   if (!res.ok || (json && json.ok === false)) throw new Error(json?.error || `Save failed (${res.status})`);
-}
-
-export async function fetchWishes(): Promise<Wish[]> {
-  if (!SHEETS_ENDPOINT) return [];
-  const url = `${SHEETS_ENDPOINT}${SHEETS_ENDPOINT.includes("?") ? "&" : "?"}action=wishes`;
-  const res = await fetch(url);
-  const json = await res.json();
-  return Array.isArray(json?.wishes) ? json.wishes : [];
 }
