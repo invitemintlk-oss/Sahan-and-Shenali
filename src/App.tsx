@@ -430,6 +430,83 @@ function WishesSection({ defaultName }: { defaultName: string }) {
   );
 }
 
+// Church ceremony start: Saturday 21 August 2027, 4:00 PM Sri Lanka time (UTC+05:30).
+const WEDDING_START = new Date("2027-08-21T16:00:00+05:30").getTime();
+
+function getTimeLeft() {
+  const diff = Math.max(0, WEDDING_START - Date.now());
+  return {
+    done: diff === 0,
+    days: Math.floor(diff / 86_400_000),
+    hours: Math.floor((diff / 3_600_000) % 24),
+    minutes: Math.floor((diff / 60_000) % 60),
+    seconds: Math.floor((diff / 1000) % 60),
+  };
+}
+
+function Countdown() {
+  const [left, setLeft] = useState(getTimeLeft);
+
+  useEffect(() => {
+    const id = setInterval(() => setLeft(getTimeLeft()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const units = [
+    { label: "Days", value: left.days },
+    { label: "Hours", value: left.hours },
+    { label: "Minutes", value: left.minutes },
+    { label: "Seconds", value: left.seconds },
+  ];
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.8 }}
+      className="w-full max-w-3xl mx-auto"
+    >
+      <div className="relative bg-paper/90 backdrop-blur-sm rounded-[2rem] shadow-2xl border border-white/40 ring-1 ring-black/5 p-6 md:p-10 overflow-hidden">
+        <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')] pointer-events-none" />
+        <div className="relative z-10 text-center">
+          <Clock className="mx-auto text-sage/70 mb-2" size={26} />
+          <h3 className="serif text-3xl md:text-5xl text-umber">
+            {left.done ? "The Day Is Here" : "Counting Down"}
+          </h3>
+          <OrnamentDivider className="mt-3" tone="text-taupe" />
+          <p className="serif italic text-taupe text-sm md:text-lg mt-3">
+            {left.done
+              ? "Thank you for celebrating with us"
+              : "until we say “I do” · 21 August 2027"}
+          </p>
+
+          {!left.done && (
+            <div className="mt-6 md:mt-8 grid grid-cols-4 gap-2 sm:gap-4 md:gap-6 max-w-xl mx-auto">
+              {units.map((u) => (
+                <div
+                  key={u.label}
+                  className="flex flex-col items-center justify-center rounded-2xl bg-white/60 border border-sage/20 py-3 md:py-5"
+                >
+                  <span
+                    className="serif text-3xl sm:text-4xl md:text-6xl text-rust font-medium leading-none tabular-nums"
+                    aria-live={u.label === "Seconds" ? "off" : undefined}
+                  >
+                    {String(u.value).padStart(2, "0")}
+                  </span>
+                  <span className="mt-2 text-[8px] sm:text-[10px] md:text-xs uppercase tracking-[0.25em] md:tracking-[0.35em] font-bold text-taupe">
+                    {u.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.section>
+  );
+}
+
 export default function App({ guestName = "" }: { guestName?: string }) {
   const [isFlapOpen, setIsFlapOpen] = useState(false);
   const [isOpened, setIsOpened] = useState(false);
@@ -1234,6 +1311,8 @@ export default function App({ guestName = "" }: { guestName?: string }) {
             />
           </motion.div>
         </div>
+
+        <Countdown />
 
         <WishesSection defaultName={guestName} />
 
